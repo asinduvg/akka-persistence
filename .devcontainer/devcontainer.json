@@ -1,0 +1,15 @@
+{
+  "name": "Scala Akka Persistence Development",
+  "dockerFile": "./Dockerfile",
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "extensions": [
+    "scalameta.metals",
+    "redhat.java",
+    "ms-vscode.vscode-node-azure-pack",
+    "ms-azuretools.vscode-docker"
+  ],
+  "postCreateCommand": "sbt update",
+  "remoteUser": "vscode"
+}
