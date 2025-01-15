@@ -37,7 +37,8 @@
           "scalameta.metals"
         ]
     }
-  }
+  },
+  "postCreateCommand": "sbt clean compile"
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
