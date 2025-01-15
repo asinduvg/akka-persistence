@@ -1,13 +1,17 @@
 {
   "name": "Scala Akka Persistence Development",
-  "dockerFile": "./Dockerfile",
+  "features": {
+    "ghcr.io/ebaskoro/devcontainer-features/scala:1": {
+      "version": "2.12.7",
+      "installSbt": true,
+      "sbtVersion": "1.8.2"
+    }
+  },
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
   },
   "extensions": [
     "scalameta.metals",
-    "redhat.java",
-    "ms-vscode.vscode-node-azure-pack",
     "ms-azuretools.vscode-docker"
   ],
   "postCreateCommand": "sbt update",
