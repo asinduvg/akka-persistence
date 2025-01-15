@@ -1,6 +1,6 @@
 package part2_event_sourcing
 
-import akka.actor.{ActorLogging, ActorSystem, Props}
+import akka.actor.{ActorLogging, ActorSystem, Props, PoisonPill}
 import akka.persistence.PersistentActor
 
 import java.util.Date
@@ -14,19 +14,27 @@ object PersistentActors extends App {
   case class Invoice(recipient: String, date: Date, amount: Int)
   case class InvoiceBulk(invoices: List[Invoice])
 
+  // Special messages
+  case object Shutdown
+
   // EVENT
-  case class InvoiceRecorded(id: Int, recipient: String, date: Date, amount: Int)
+  case class InvoiceRecorded(
+      id: Int,
+      recipient: String,
+      date: Date,
+      amount: Int
+  )
 
   class Accountant extends PersistentActor with ActorLogging {
 
     var latestInvoiceId = 0
     var totalAmount = 0
 
-    override def persistenceId: String = "simple-account" // best practice: make it unique
+    override def persistenceId: String =
+      "simple-account" // best practice: make it unique
 
-    /**
-     * The "normal" receive command
-     */
+    /** The "normal" receive command
+      */
     override def receiveCommand: Receive = {
       case Invoice(recipient, date, amount) =>
         /*
@@ -46,9 +54,11 @@ object PersistentActors extends App {
           totalAmount += amount
 
           // correctly identify the sender of the COMMAND
-          sender() ! "PersistenceACK"
+          // sender() ! "PersistenceACK"
 
-          log.info(s"Persisted $e as invoice #${e.id}, for total amount $totalAmount")
+          log.info(
+            s"Persisted $e as invoice #${e.id}, for total amount $totalAmount"
+          )
         }
       case InvoiceBulk(invoices) =>
         /*
@@ -66,18 +76,24 @@ object PersistentActors extends App {
         persistAll(events) { e =>
           latestInvoiceId += 1
           totalAmount += e.amount
-          log.info(s"Persisted SINGLE $e as invoice #${e.id}, for total amount $totalAmount")
+          log.info(
+            s"Persisted SINGLE $e as invoice #${e.id}, for total amount $totalAmount"
+          )
         }
+
+      case Shutdown =>
+        context.stop(self)
 
       // act like a normal actor
       case "print" =>
-        log.info(s"Latest invoice id: $latestInvoiceId, total amount: $totalAmount")
+        log.info(
+          s"Latest invoice id: $latestInvoiceId, total amount: $totalAmount"
+        )
 
     }
 
-    /**
-     * Handler that will be called on recovery
-     */
+    /** Handler that will be called on recovery
+      */
     override def receiveRecover: Receive = {
       /*
         best practice: follow the logic in the persist steps of receiveCommand
@@ -85,7 +101,9 @@ object PersistentActors extends App {
       case InvoiceRecorded(id, _, _, amount) =>
         latestInvoiceId = id
         totalAmount += amount
-        log.info(s"Recovered invoice #$id for amount $amount, total amount: $totalAmount")
+        log.info(
+          s"Recovered invoice #$id for amount $amount, total amount: $totalAmount"
+        )
     }
 
     /*
@@ -95,7 +113,11 @@ object PersistentActors extends App {
       Best practice: start the actor again after a while.
       (use Backoff supervisor)
      */
-    override protected def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
+    override protected def onPersistFailure(
+        cause: Throwable,
+        event: Any,
+        seqNr: Long
+    ): Unit = {
       log.error(s"Fail to persist $event because of $cause")
       super.onPersistFailure(cause, event, seqNr)
     }
@@ -104,7 +126,11 @@ object PersistentActors extends App {
       Called if the JOURNAL fails to persist the event
       The actor is RESUMED.
      */
-    override protected def onPersistRejected(cause: Throwable, event: Any, seqNr: Long): Unit = {
+    override protected def onPersistRejected(
+        cause: Throwable,
+        event: Any,
+        seqNr: Long
+    ): Unit = {
       log.error(s"Persist rejected for $event because of $cause")
       super.onPersistRejected(cause, event, seqNr)
     }
@@ -114,25 +140,31 @@ object PersistentActors extends App {
   val system = ActorSystem("PersistentActors")
   val accountant = system.actorOf(Props[Accountant], "simpleAccountant")
 
-//  for (i <- 1 to 10) {
-//    accountant ! Invoice("The Sofa Company", new Date, i * 1000)
-//  }
-
+  for (i <- 1 to 10) {
+    accountant ! Invoice("The Sofa Company", new Date, i * 1000)
+  }
 
   /*
     Persistence failures
    */
 
-  /**
-   * Persisting multiple events
-   *
-   * persistAll
-   */
-  val newInvoices = for (i <- 1 to 5) yield Invoice("The awesome chairs", new Date, i * 2000)
-  accountant ! InvoiceBulk(newInvoices.toList)
+  /** Persisting multiple events
+    *
+    * persistAll
+    */
+  // val newInvoices = for (i <- 1 to 5) yield Invoice("The awesome chairs", new Date, i * 2000)
+  // accountant ! InvoiceBulk(newInvoices.toList)
 
   /*
     NEVER EVER CALL PERSIST OR PERSISTALL FROM FUTURES.
    */
+
+  /** Shutdown of persistent actors
+   * Best Practice: Define your own "shutwon" messages
+    */
+
+  // accountant ! PoisonPill /* don't do it */
+
+  accountant ! Shutdown
 
 }

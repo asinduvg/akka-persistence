@@ -123,6 +123,10 @@ project/plugins/project/
 .lib/
 
 .bsp
+project
+.bloop
+.metals
+
 
 ### Scala ###
 
