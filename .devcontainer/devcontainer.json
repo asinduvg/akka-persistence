@@ -10,10 +10,6 @@
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
   },
-  "extensions": [
-    "scalameta.metals",
-    "ms-azuretools.vscode-docker"
-  ],
   "postCreateCommand": "sbt update",
   "remoteUser": "vscode"
 }
