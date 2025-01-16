@@ -1,20 +1,15 @@
 package part2_event_sourcing
 
-import akka.persistence.PersistentActor
-import akka.actor.ActorLogging
-import akka.actor.Props
-import akka.actor.ActorSystem
+import akka.actor.{ ActorLogging, ActorSystem, Props }
+import akka.persistence.{ PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer }
 
 import scala.collection.mutable
-import akka.persistence.SnapshotOffer
-import akka.persistence.SaveSnapshotSuccess
-import akka.persistence.SaveSnapshotFailure
 
 object Snapshots extends App {
 
   // Commands
   case class ReceivedMessage(contents: String) // message FROM your contact
-  case class SentMessage(contents: String) // message TO your contact
+  case class SentMessage(contents: String)     // message TO your contact
 
   // events
   case class ReceivedMessageRecord(id: Int, contents: String)
@@ -24,17 +19,15 @@ object Snapshots extends App {
     def props(owner: String, contact: String) = Props(new Chat(owner, contact))
   }
 
-  class Chat(owner: String, contact: String)
-      extends PersistentActor
-      with ActorLogging {
+  class Chat(owner: String, contact: String) extends PersistentActor with ActorLogging {
 
-    type Sender = String
+    type Sender   = String
     type Contents = String
 
-    val MAX_MESSAGES = 10
+    val MAX_MESSAGES              = 10
     var commandsWithoutCheckpoint = 0
-    var currentMessageId = 0
-    val lastMessages = new mutable.Queue[(Sender, Contents)]()
+    var currentMessageId          = 0
+    val lastMessages              = new mutable.Queue[(Sender, Contents)]()
 
     override def persistenceId: String = s"$owner-$contact-chat"
 
@@ -96,7 +89,7 @@ object Snapshots extends App {
   }
 
   val system = ActorSystem("SnapshotsDemo")
-  val chat = system.actorOf(Chat.props("daniel123", "martin345"))
+  val chat   = system.actorOf(Chat.props("daniel123", "martin345"))
 
 //   for (i <- 1 to 100000) {
 //     chat ! ReceivedMessage(s"Akka Rocks $i")

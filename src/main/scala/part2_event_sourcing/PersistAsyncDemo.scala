@@ -1,11 +1,7 @@
 package part2_event_sourcing
 
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
 import akka.persistence.PersistentActor
-import akka.actor.ActorLogging
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.Props
-import akka.actor.ActorSystem
 
 object PersistAsyncDemo extends App {
 
@@ -18,9 +14,7 @@ object PersistAsyncDemo extends App {
     )
   }
 
-  class CriticalStreamProcessor(eventAggregator: ActorRef)
-      extends PersistentActor
-      with ActorLogging {
+  class CriticalStreamProcessor(eventAggregator: ActorRef) extends PersistentActor with ActorLogging {
     override def persistenceId: String = "critical-stream-processor"
 
     override def receiveCommand: Receive = { case Command(contents) =>
@@ -64,7 +58,7 @@ object PersistAsyncDemo extends App {
     persistAsync vs persist
         - perf: high-throughput environments
 
-    persit vs persistAsync
+    persist vs persistAsync
         - ordering guarantees
    */
 

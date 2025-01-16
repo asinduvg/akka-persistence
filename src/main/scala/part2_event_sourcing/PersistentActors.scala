@@ -1,6 +1,6 @@
 package part2_event_sourcing
 
-import akka.actor.{ActorLogging, ActorSystem, Props, PoisonPill}
+import akka.actor.{ ActorLogging, ActorSystem, PoisonPill, Props }
 import akka.persistence.PersistentActor
 
 import java.util.Date
@@ -12,6 +12,7 @@ object PersistentActors extends App {
 
   // COMMANDS
   case class Invoice(recipient: String, date: Date, amount: Int)
+
   case class InvoiceBulk(invoices: List[Invoice])
 
   // Special messages
@@ -19,22 +20,23 @@ object PersistentActors extends App {
 
   // EVENT
   case class InvoiceRecorded(
-      id: Int,
-      recipient: String,
-      date: Date,
-      amount: Int
+    id: Int,
+    recipient: String,
+    date: Date,
+    amount: Int
   )
 
   class Accountant extends PersistentActor with ActorLogging {
 
     var latestInvoiceId = 0
-    var totalAmount = 0
+    var totalAmount     = 0
 
     override def persistenceId: String =
       "simple-account" // best practice: make it unique
 
-    /** The "normal" receive command
-      */
+    /**
+     * The "normal" receive command
+     */
     override def receiveCommand: Receive = {
       case Invoice(recipient, date, amount) =>
         /*
@@ -46,8 +48,7 @@ object PersistentActors extends App {
 
         log.info(s"Receive invoice for amount: $amount")
         persist(InvoiceRecorded(latestInvoiceId, recipient, date, amount))
-        /* time gap: all other messages sent to this actor are STASHED */
-        { e =>
+        /* time gap: all other messages sent to this actor are STASHED */ { e =>
           // SAFE to access mutable state here
           // update state
           latestInvoiceId += 1
@@ -68,7 +69,7 @@ object PersistentActors extends App {
          */
         val invoiceIds = latestInvoiceId to (latestInvoiceId + invoices.size)
         val events = invoices.zip(invoiceIds).map { pair =>
-          val id = pair._2
+          val id      = pair._2
           val invoice = pair._1
 
           InvoiceRecorded(id, invoice.recipient, invoice.date, invoice.amount)
@@ -92,8 +93,9 @@ object PersistentActors extends App {
 
     }
 
-    /** Handler that will be called on recovery
-      */
+    /**
+     * Handler that will be called on recovery
+     */
     override def receiveRecover: Receive = {
       /*
         best practice: follow the logic in the persist steps of receiveCommand
@@ -114,9 +116,9 @@ object PersistentActors extends App {
       (use Backoff supervisor)
      */
     override protected def onPersistFailure(
-        cause: Throwable,
-        event: Any,
-        seqNr: Long
+      cause: Throwable,
+      event: Any,
+      seqNr: Long
     ): Unit = {
       log.error(s"Fail to persist $event because of $cause")
       super.onPersistFailure(cause, event, seqNr)
@@ -127,9 +129,9 @@ object PersistentActors extends App {
       The actor is RESUMED.
      */
     override protected def onPersistRejected(
-        cause: Throwable,
-        event: Any,
-        seqNr: Long
+      cause: Throwable,
+      event: Any,
+      seqNr: Long
     ): Unit = {
       log.error(s"Persist rejected for $event because of $cause")
       super.onPersistRejected(cause, event, seqNr)
@@ -137,7 +139,7 @@ object PersistentActors extends App {
 
   }
 
-  val system = ActorSystem("PersistentActors")
+  val system     = ActorSystem("PersistentActors")
   val accountant = system.actorOf(Props[Accountant], "simpleAccountant")
 
   for (i <- 1 to 10) {
@@ -148,10 +150,11 @@ object PersistentActors extends App {
     Persistence failures
    */
 
-  /** Persisting multiple events
-    *
-    * persistAll
-    */
+  /**
+   * Persisting multiple events
+   *
+   * persistAll
+   */
   // val newInvoices = for (i <- 1 to 5) yield Invoice("The awesome chairs", new Date, i * 2000)
   // accountant ! InvoiceBulk(newInvoices.toList)
 
@@ -159,9 +162,9 @@ object PersistentActors extends App {
     NEVER EVER CALL PERSIST OR PERSISTALL FROM FUTURES.
    */
 
-  /** Shutdown of persistent actors Best Practice: Define your own "shutwon"
-    * messages
-    */
+  /**
+   * Shutdown of persistent actors Best Practice: Define your own "shutdown" messages
+   */
 
   // accountant ! PoisonPill /* don't do it */
 

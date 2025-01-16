@@ -1,12 +1,7 @@
 package part2_event_sourcing
 
-import akka.persistence.PersistentActor
-import akka.actor.ActorLogging
-import akka.actor.ActorSystem
-import akka.actor.Props
-import akka.persistence.Recovery
-import akka.persistence.SnapshotSelectionCriteria
-import akka.persistence.RecoveryCompleted
+import akka.actor.{ ActorLogging, ActorSystem, Props }
+import akka.persistence.{ PersistentActor, RecoveryCompleted }
 
 object RecoveryDemo extends App {
 
@@ -21,15 +16,14 @@ object RecoveryDemo extends App {
 
     override def receiveCommand: Receive = online(0)
 
-    def online(latestPersistedEventId: Int): Receive = {
-      case Command(contents) =>
-        persist(Event(latestPersistedEventId, contents)) { event =>
-          log.info(
-            s"Successfully persisted $event, recovery is ${if (this.recoveryFinished) ""
-              else "NOT"} finished."
-          )
-          context.become(online(latestPersistedEventId + 1))
-        }
+    def online(latestPersistedEventId: Int): Receive = { case Command(contents) =>
+      persist(Event(latestPersistedEventId, contents)) { event =>
+        log.info(
+          s"Successfully persisted $event, recovery is ${if (this.recoveryFinished) ""
+            else "NOT"} finished."
+        )
+        context.become(online(latestPersistedEventId + 1))
+      }
     }
 
     override def receiveRecover: Receive = {
@@ -51,8 +45,8 @@ object RecoveryDemo extends App {
     }
 
     override protected def onRecoveryFailure(
-        cause: Throwable,
-        event: Option[Any]
+      cause: Throwable,
+      event: Option[Any]
     ): Unit = {
       log.error(s"I failed at recovery")
       super.onRecoveryFailure(cause, event)
@@ -66,7 +60,7 @@ object RecoveryDemo extends App {
 
   }
 
-  val system = ActorSystem("RecoveryDemo")
+  val system        = ActorSystem("RecoveryDemo")
   val recoveryActor = system.actorOf(Props[RecoveryActor], "recoveryActor")
 
   /* Stashing commands */

@@ -1,12 +1,9 @@
 package part2_event_sourcing
 
-import java.util.Date
-import akka.actor.ActorRef
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
 import akka.persistence.PersistentActor
-import akka.actor.ActorLogging
-import akka.actor.Props
-import akka.actor.ActorSystem
-import akka.actor.Actor
+
+import java.util.Date
 
 object MultiplePersists extends App {
 
@@ -19,16 +16,16 @@ object MultiplePersists extends App {
 
   // EVENTS
   case class TaxRecord(
-      taxId: String,
-      recordId: Int,
-      date: Date,
-      totalAmount: Int
+    taxId: String,
+    recordId: Int,
+    date: Date,
+    totalAmount: Int
   )
   case class InvoiceRecord(
-      invoiceRecordId: Int,
-      recipient: String,
-      date: Date,
-      amount: Int
+    invoiceRecordId: Int,
+    recipient: String,
+    date: Date,
+    amount: Int
   )
 
   object DiligentAccountant {
@@ -37,39 +34,33 @@ object MultiplePersists extends App {
     )
   }
 
-  class DiligentAccountant(taxId: String, taxAuthority: ActorRef)
-      extends PersistentActor
-      with ActorLogging {
+  class DiligentAccountant(taxId: String, taxAuthority: ActorRef) extends PersistentActor with ActorLogging {
 
-    var latestTaxRecordId = 0
+    var latestTaxRecordId     = 0
     var latestInvoiceRecordId = 0
 
     override def persistenceId: String = "diligent-accountant"
 
-    override def receiveCommand: Receive = {
-      case Invoice(recipient, date, amount) =>
-        // journal ! TaxRecord
-        persist(TaxRecord(taxId, latestTaxRecordId, date, amount / 3)) {
-          record =>
-            taxAuthority ! record
-            latestTaxRecordId += 1
-            persist(
-              "I hereby declare this tax record to be true and complete."
-            ) { declaration =>
-              taxAuthority ! declaration
-            }
+    override def receiveCommand: Receive = { case Invoice(recipient, date, amount) =>
+      // journal ! TaxRecord
+      persist(TaxRecord(taxId, latestTaxRecordId, date, amount / 3)) { record =>
+        taxAuthority ! record
+        latestTaxRecordId += 1
+        persist(
+          "I hereby declare this tax record to be true and complete."
+        ) { declaration =>
+          taxAuthority ! declaration
         }
+      }
 
-        // journal ! InvoiceRecord
-        persist(InvoiceRecord(latestInvoiceRecordId, recipient, date, amount)) {
-          invoiceRecord =>
-            taxAuthority ! invoiceRecord
-            latestInvoiceRecordId += 1
-            persist("I hereby declare this invoice record to be true.") {
-              declaration =>
-                taxAuthority ! declaration
-            }
+      // journal ! InvoiceRecord
+      persist(InvoiceRecord(latestInvoiceRecordId, recipient, date, amount)) { invoiceRecord =>
+        taxAuthority ! invoiceRecord
+        latestInvoiceRecordId += 1
+        persist("I hereby declare this invoice record to be true.") { declaration =>
+          taxAuthority ! declaration
         }
+      }
     }
 
     override def receiveRecover: Receive = { case event =>
@@ -83,7 +74,7 @@ object MultiplePersists extends App {
     }
   }
 
-  val system = ActorSystem("MultiplePersistDemo")
+  val system       = ActorSystem("MultiplePersistDemo")
   val taxAuthority = system.actorOf(Props[TaxAuthority], "HMRC")
   val accountant =
     system.actorOf(DiligentAccountant.props("UK52352_67342", taxAuthority))
@@ -92,8 +83,9 @@ object MultiplePersists extends App {
 
   /* The message ordering (TaxRecord -> InvoiceRecord) is GUARANTEED. */
 
-  /** PERSISTENCE IS ALSO BASED ON MESSAGE PASSING.
-    */
+  /**
+   * PERSISTENCE IS ALSO BASED ON MESSAGE PASSING.
+   */
 
   // nested persisting
 

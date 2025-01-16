@@ -1,7 +1,7 @@
 package part2_event_sourcing
 
 import akka.persistence.PersistentActor
-import akka.actor.{ActorLogging, Props, ActorSystem}
+import akka.actor.{ ActorLogging, ActorSystem, Props }
 
 import scala.util.Random
 import scala.collection.mutable
@@ -21,7 +21,7 @@ object PersistentActorsExercise extends App {
   class VotingStation extends PersistentActor with ActorLogging {
 
     val citizensVoted = new mutable.HashSet[String]()
-    val poll = new mutable.HashMap[String, Int]()
+    val poll          = new mutable.HashMap[String, Int]()
 
     override def persistenceId: String = "voting-station"
     override def receiveCommand: Receive = {
@@ -44,11 +44,11 @@ object PersistentActorsExercise extends App {
 
     private def handleInternalStateChange(citizenPID: String, candidate: String): Unit = {
       citizensVoted.add(citizenPID)
-      poll.put(candidate, (poll.getOrElse(candidate, 0) + 1))
+      poll.put(candidate, poll.getOrElse(candidate, 0) + 1)
     }
   }
 
-  val system = ActorSystem("PersistentActors")
+  val system        = ActorSystem("PersistentActors")
   val votingStation = system.actorOf(Props[VotingStation], "votingStation")
 
   // val chars = ('0' to '9') ++ ('A' to 'Z')
@@ -68,20 +68,19 @@ object PersistentActorsExercise extends App {
 
   // Danis
   val votesMap = Map[String, String](
-    "Alice" -> "Martin",
-    "Bob" -> "Roland",
+    "Alice"   -> "Martin",
+    "Bob"     -> "Roland",
     "Charlie" -> "Martin",
-    "David" -> "Jonas",
-    "Daniel" -> "Martin"
+    "David"   -> "Jonas",
+    "Daniel"  -> "Martin"
   )
 
   // votesMap.keys.foreach { citizen =>
-  //   votingStation ! Vote(citizen, votesMap(citizen))  
+  //   votingStation ! Vote(citizen, votesMap(citizen))
   // }
 
   votingStation ! Vote("Daniel", "Daniel")
   votingStation ! "print"
   // Danis
-
 
 }
