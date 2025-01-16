@@ -159,8 +159,8 @@ object PersistentActors extends App {
     NEVER EVER CALL PERSIST OR PERSISTALL FROM FUTURES.
    */
 
-  /** Shutdown of persistent actors
-   * Best Practice: Define your own "shutwon" messages
+  /** Shutdown of persistent actors Best Practice: Define your own "shutwon"
+    * messages
     */
 
   // accountant ! PoisonPill /* don't do it */

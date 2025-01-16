@@ -39,7 +39,8 @@
         "extensions": [
           "scalameta.metals",
           "github.copilot",
-          "github.copilot-chat"
+          "github.copilot-chat",
+          "eamodio.gitlens"
         ]
     }
   },
