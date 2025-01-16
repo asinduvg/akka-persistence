@@ -3,8 +3,8 @@ package part2_event_sourcing
 import akka.persistence.PersistentActor
 import akka.actor.{ActorLogging, Props, ActorSystem}
 
-import scala.collection.mutable.Map
 import scala.util.Random
+import scala.collection.mutable
 
 object PersistentActorsExercise extends App {
 
@@ -20,40 +20,43 @@ object PersistentActorsExercise extends App {
 
   class VotingStation extends PersistentActor with ActorLogging {
 
-    var citizensVoted = List[String]()
-    var poll = Map[String, Int]()
+    val citizensVoted = new mutable.HashSet[String]()
+    val poll = new mutable.HashMap[String, Int]()
 
     override def persistenceId: String = "voting-station"
     override def receiveCommand: Receive = {
       case vote @ Vote(citizenPID, candidate) =>
-        val isAlreadyVoted = citizensVoted.filter(_ == citizenPID)
-        if (isAlreadyVoted.isEmpty) {
-          persist(vote) { e =>
-            citizensVoted = citizensVoted :+ e.citizenPID
-            poll += (e.candidate -> (poll.getOrElse(e.candidate, 0) + 1))
-            println(s"[Vote Recorded]: Currect Votees = $citizensVoted: Votes = $poll")
+        if (!citizensVoted.contains(citizenPID)) {
+          persist(vote) { e => // COMMAND sourcing
+            handleInternalStateChange(e.citizenPID, e.candidate)
+            log.info(s"[Vote Recorded]: $vote")
           }
         } else {
-          println("Illegal operation")
+          log.warning(s"Citizen $citizenPID's trying to vote again")
         }
+      case "print" =>
+        log.info(s"\n[Voters]: $citizensVoted\n[Poll]: $poll")
     }
-    override def receiveRecover: Receive = { case Vote(citizenPID, candidate) =>
-      citizensVoted = citizensVoted :+ citizenPID
-      poll += (candidate -> (poll.getOrElse(candidate, 0) + 1))
-      println(s"[Vote Recovered]: Currect Votees = $citizensVoted: Votes = $poll")
+    override def receiveRecover: Receive = { case vote @ Vote(citizenPID, candidate) =>
+      handleInternalStateChange(citizenPID, candidate)
+      log.info(s"[Vote Recovered]: $vote")
+    }
+
+    private def handleInternalStateChange(citizenPID: String, candidate: String): Unit = {
+      citizensVoted.add(citizenPID)
+      poll.put(candidate, (poll.getOrElse(candidate, 0) + 1))
     }
   }
 
   val system = ActorSystem("PersistentActors")
   val votingStation = system.actorOf(Props[VotingStation], "votingStation")
 
-//   votingStation ! Vote("001", "Asindu")
+  // val chars = ('0' to '9') ++ ('A' to 'Z')
+  // val candidates = List("Asindu", "Daniel", "Chamika", "Ashan")
 
-  val chars = ('0' to '9') ++ ('A' to 'Z')
-  val candidates = List("Asindu", "Daniel", "Chamika", "Ashan")
-
-  def getPersonID = (1 to 2).map(_ => chars(Random.nextInt(chars.length))).mkString
-  def getCandidate = candidates(Random.nextInt(candidates.length))
+  // def getPersonID =
+  //   (1 to 2).map(_ => chars(Random.nextInt(chars.length))).mkString
+  // def getCandidate = candidates(Random.nextInt(candidates.length))
 
   // for {
   //   _ <- 1 to 100000
@@ -62,5 +65,23 @@ object PersistentActorsExercise extends App {
   // } yield {
   //   votingStation ! Vote(pID, candidate)
   // }
+
+  // Danis
+  val votesMap = Map[String, String](
+    "Alice" -> "Martin",
+    "Bob" -> "Roland",
+    "Charlie" -> "Martin",
+    "David" -> "Jonas",
+    "Daniel" -> "Martin"
+  )
+
+  // votesMap.keys.foreach { citizen =>
+  //   votingStation ! Vote(citizen, votesMap(citizen))  
+  // }
+
+  votingStation ! Vote("Daniel", "Daniel")
+  votingStation ! "print"
+  // Danis
+
 
 }
